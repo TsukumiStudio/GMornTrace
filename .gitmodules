@@ -1,0 +1,3 @@
+[submodule "tools/gmorn_test_runner"]
+	path = tools/gmorn_test_runner
+	url = https://github.com/TsukumiStudio/GMornTestRunner.git

@@ -1,0 +1,5 @@
+.godot/
+*.log
+/test-summary.json
+/evidence/
+.DS_Store
