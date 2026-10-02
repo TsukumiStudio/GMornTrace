@@ -58,7 +58,7 @@ trace.complete(submitted, 43, {"checksum": "dummy_digest"})
 
 clear/reset/beginの前に取得したhandleは使えません。idが再び1になってもgenerationが違うため誤って新しいeventに結びません。同じparentへの複数completionは可能です。
 
-順序は`id`で示します。`observed_frame`は後退できず、producer frameはobserved frame以下です。遅れた観測は過去のproducer frameと現在のobserved frameを明示して記録できます。異なるscene loadなどでframeを数え直す場合はclear/resetを使います。
+順序は`id`で示します。`observed_frame`は後退できず、producer frameはobserved frame以下です。遅れた観測は過去のproducer frameと現在のobserved frameを明示して記録できます。異なるscene loadなどでframeを数え直す場合はclear/resetを使います。producer/observedには同じframeカウンターを使い、process frameとphysics frame、譜面tickを混ぜません。譜面tickはpayloadの別fieldで記録します。
 
 producer timeは呼び出し側の時計です。`-1`は未取得。eventは別に`Time.get_ticks_usec()`によるreceipt start/endを持ちます。異なる時計を同期済みと扱いません。
 
@@ -68,13 +68,13 @@ producer timeは呼び出し側の時計です。`-1`は未取得。eventは別�
 
 payloadはnull/bool/int/有限float/String/Array/Dictionaryのみ。Object、Node、Resource、非有限float、循環・深すぎる構造、512nodesを超えるpayloadは拒否します。深さ上限は8です。
 
-JSONの数値変換でint64の下位bitを失わないよう、整数は`{"type":"int64","decimal":"..."}`でexportします。floatは`{"type":"float64","value":...,"bits_be":"..."}`でIEEE754 doubleのbig-endian bitsも残します。この表現はmetadataにも適用します。通常snapshotではnative int/floatのままです。exportは型付き表現なので、JSONをそのまま通常snapshotだと思って扱わないでください。
+JSONの数値変換でint64の下位bitを失わないよう、整数は`{"type":"int64","decimal":"..."}`でexportします。floatは`{"type":"float64","value":...,"bits_be":"..."}`でIEEE754 doubleのbig-endian bitsも残します。この表現はmetadataにも適用します。通常snapshotではnative int/floatのままです。float64 bitsはGodotのfloat表現です。元データがfloat32なら、呼び出し側で元bits32を別fieldへ残してください。exportは型付き表現なので、JSONをそのまま通常snapshotだと思って扱わないでください。
 
 ## 記録を絞る
 
-`allowed_fields`はtop-levelの許可名です。指定した場合、未知のfieldは`<redacted>`になります。sensitive keyは入れ子でもredactします。Stringは短いASCII symbolのみ残し、path、メール形式、空白付きの自由文などはredactします。redaction件数をmetadataに残します。
+`allowed_fields`はtop-levelの許可名です。指定した場合、未知のfieldは`<redacted>`になります。sensitive keyは入れ子でもredactします。Stringは短いASCII symbolのみ残し、path、メール形式、空白付きの自由文などはredactします。redaction件数をmetadataに残します。top-level allowlistが許可した入れ子にもsensitive-key検査は行いますが、入れ子の通常field名にtop-level allowlistは適用しません。
 
-これで任意の秘密を検出できるわけではありません。session/kind/field名には匿名の固定コードを使い、必要な数値と状態だけを渡してください。生ログ、ユーザー識別子、保存内容を入力しない用途を想定しています。traceの自動送信機能はありません。
+これで任意の秘密を検出できるわけではありません。session/kind/field名には匿名の固定コードを使い、必要な数値と状態だけを渡してください。生ログ、ユーザー識別子、保存内容を入力しない用途を想定しています。traceの自動送信機能はありません。captureをresetした後の遅延callbackは、古いtrace instanceへ結ぶか、呼び出し側でcancelしてください。stale handleを新captureへcompleteすると拒否件数が増え、そのcaptureのvalidはfalseになります。
 
 記録ごとにDictionary等を作ります。zero-allocation profiler、GPU profiler、音声latency計測器ではありません。
 
